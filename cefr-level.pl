@@ -28,6 +28,7 @@ sub level_lt {
 }
 my %phrases = map { $_ => () } keys %lmap;
 my %simple_words = ();
+my %simple_totals = map { $_ => 0 } keys %lmap;
 
 sub addforms {
     my $word = shift;
@@ -98,6 +99,35 @@ sub regexify {
     return $out;
 }
 
+sub dumppunct {
+    my $in = shift;
+    $in =~ s/[\.\?,!"']$//;
+    $in =~ s/^['"]//;
+    $in;
+}
+
+my @names = ();
+my @unknown = ();
+sub check_simple {
+    my $raw = shift;
+    my $nopunct = dumppunct($raw);
+    my $lower = lc($nopunct);
+    if(exists $simple_words{$raw}) {
+        my $lvl = $simple_words{$raw};
+        $simple_totals{$lvl}++;
+    } elsif(exists $simple_words{$nopunct}) {
+        my $lvl = $simple_words{$nopunct};
+        $simple_totals{$lvl}++;
+    } elsif(exists $simple_words{$lower}) {
+        my $lvl = $simple_words{$lower};
+        $simple_totals{$lvl}++;
+   } elsif($nopunct =~ /[A-Z][a-z]+/) {
+        push @names, $nopunct;
+    } else {
+        push @unknown, $nopunct;
+    }
+}
+
 while(<DICT>) {
     chomp;
     s/\r//;
@@ -117,13 +147,27 @@ while(<DICT>) {
             addforms($word, $pos, $level);
         }
     } elsif(/^([0-9]+);"([^"]+)";([^;]*)?;([ABC][12]);(.*)$/) {
-        print "Complex: $_\n";
+#        print "Complex: $_\n";
     } else {
         print "NO MATCH: $_\n";
     }
 }
 
-print regexify("do (sb) wrong") . "\n";
-print regexify("show up late/early") . "\n";
+my $text = '';
+while(<STDIN>) {
+    chomp;
+    s/\r//;
+    $text .= " $_";
+}
+$text =~ s/^ //;
+my @words = split/ /, $text;
+for my $simple (@words) {
+    check_simple($simple);
+}
 
-print Dumper(%simple_words);
+print "Raw wordcount: $#words\n";
+for my $levelout (qw/A1 A2 B1 B2 C1 C2/) {
+    my $cnt = $simple_totals{$levelout};
+    my $pct = sprintf("%.2f", $cnt / $#words * 100);
+    print "Level $levelout: $cnt ($pct%)\n";
+}
