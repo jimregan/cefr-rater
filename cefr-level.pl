@@ -77,8 +77,8 @@ sub regexify {
     } elsif($in =~ /^not /) {
         $in s/^not have //;
         $out = "(?:not have |doesn't have |don't have |didn't have |won't have |hasn't |hadn't |haven't )";
-    } elsif($in =~ /sth\/doing sth$/) {
-        $in s/sth\/doing sth$/ (doing)/;
+    } elsif($in =~ / sth\/doing sth$/) {
+        $in s/ sth\/doing sth$/ (doing)/;
     }
     my @words = split/ /, $in;
     for(my $i = 0; $i <= $#words; $i++) {
@@ -101,18 +101,15 @@ sub regexify {
             $w =~ s/\(s\)$/s?/g;
         }
         if($parens) {
-            $out .= '(?:';
-        }
-        $out .= $w;
-        if($i != $#words) {
-            if($parens) {
-                $out .= ' )?';
+            if($i != $#words) {
+                $out .= "(?:$w )?";
             } else {
-                $out .= ' ';
+                $out =~ s/ $//;
+                $out .= "(?: $w)?";
             }
         } else {
-            if($parens) {
-                $out .= ')?';
+            if($i != $#words) {
+                $out .= ' ';
             }
         }
     }
