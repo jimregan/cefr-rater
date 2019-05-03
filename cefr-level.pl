@@ -10,12 +10,8 @@ use Data::Dumper;
 my $BE_FILENAME = 'English Vocabulary Profile Online - British English.csv';
 open(DICT, '<', $BE_FILENAME);
 
-my %lexical_or = map { $_ => 1 } qw/11337 11857 11883 13645 13647 13650 13843 13932 13933 15360 15607 15608 15524 15525 15526 15527 15528 15529 15532/;
-my %slash_splits = map { $_ => 1 } qw/15629 15490/;
-
-my %replace = (
-    '15635' => 'when it comes to (doing) sth',
-);
+my %lexical_or = map { $_ => 1 } qw/11337 11857 11883 13645 13647 13650 13843 13932 13933 15360 15607 15608 15524 15525 15526 15527 15528 15529 15532 15571/;
+my %slash_splits = map { $_ => 1 } qw/15629 15490 12226/;
 
 my %lmap = (
     'A1' => 1,
@@ -62,11 +58,29 @@ sub addforms {
 
 sub regexify {
     my $in = shift;
+    my $pos = shift;
+    $in =~ s/^ +//;
+    $in =~ s/ +$//;
     $in =~ s/\, etc.$//;
     $in =~ s/\, etc. / /;
     $in =~ s/ (sb\/sth$|sth\/sb$|sth$|sb$)//;
-    my @words = split/ /, $in;
     my $out = '';
+    if($in =~ /^not be /) {
+        $in s/^not be //;
+        $out = "(?:isn't |is not |wasn't |was not |not been |will not be |not be |won't be |are not |aren't |were not |weren't |am not )";
+    } elsif($in =~ /^not be\/come /) {
+        $in s/^not be //;
+        $out = "(?:isn't |is not |wasn't |was not |not been |will not be |not be |won't be |are not |aren't |were not |weren't |am not |not come |doesn't come |don't come |didn't come |won't come)";
+    } elsif($in =~ /^not /) {
+        $in s/^not //;
+        $out = "(?:not |doesn't |don't |didn't |won't )";
+    } elsif($in =~ /^not /) {
+        $in s/^not have //;
+        $out = "(?:not have |doesn't have |don't have |didn't have |won't have |hasn't |hadn't |haven't )";
+    } elsif($in =~ /sth\/doing sth$/) {
+        $in s/sth\/doing sth$/ (doing)/;
+    }
+    my @words = split/ /, $in;
     for(my $i = 0; $i <= $#words; $i++) {
         my $w = $words[$i];
         my $parens = 0;
@@ -83,6 +97,8 @@ sub regexify {
         } elsif($w =~ /\//) {
             $w =~ s!/!|!g;
             $w = "(?:$w)";
+        } elsif($w =~ /\(s\)$/) {
+            $w =~ s/\(s\)$/s?/g;
         }
         if($parens) {
             $out .= '(?:';
@@ -151,7 +167,20 @@ while(<DICT>) {
             addforms($word, $pos, $level);
         }
     } elsif(/^([0-9]+);"([^"]+)";([^;]*)?;([ABC][12]);(.*)$/) {
+        my $id = $1;
+        my $word = $2;
+        my $level = $4;
+        my $pos = $5;
 #        print "Complex: $_\n";
+        my @parts = ();
+        if(exists $lexical_or{$id}) {
+            @parts = split/ or /, $word;
+        } elsif(exists $slash_splits{$id}) {
+            @parts = split/ ?\/ /, $word;
+        } else {
+            push @parts, $word;
+        }
+        
     } else {
         print "NO MATCH: $_\n";
     }
