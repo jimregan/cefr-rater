@@ -10,8 +10,12 @@ use Data::Dumper;
 my $BE_FILENAME = 'English Vocabulary Profile Online - British English.csv';
 open(DICT, '<', $BE_FILENAME);
 
-my %lexical_or = map { $_ => 1 } qw/11337 11857 11883 13645 13647 13650 13843 13932 13933 15360 15607 15608/;
+my %lexical_or = map { $_ => 1 } qw/11337 11857 11883 13645 13647 13650 13843 13932 13933 15360 15607 15608 15524 15525 15526 15527 15528 15529 15532/;
 my %slash_splits = map { $_ => 1 } qw/15629 15490/;
+
+my %replace = (
+    '15635' => 'when it comes to (doing) sth',
+);
 
 my %lmap = (
     'A1' => 1,
