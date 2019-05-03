@@ -202,6 +202,13 @@ while(<DICT>) {
                 next;
             }
         }
+        if($word =~ / or /) {
+            my @p = split/ or /, $word;
+            my @w1 = split/ /, $p[0];
+            if($p[1] =~ /^$w1[0]/) {
+                print "LEXICAL: $id\t$word\n"
+            }
+        }
         my @parts = ();
         if(exists $lexical_or{$id}) {
             @parts = split/ or /, $word;
