@@ -180,8 +180,11 @@ while(<DICT>) {
             push @{$phrases{'B1'}}, "check-in(?: counters?)?";
             next;
         }
+        if($id eq '5741') {
+            push @{$phrases{'B1'}}, "modal(?:s| verbs?)?";
+            next;
+        }
         if($pos eq 'noun' && $word !~ /[\(\)\/]/) {
-            print STDERR "Safe noun: $word\n";
             my $aref = $phrases{$level};
             my $lemmaqueue = '';
             if($word =~ /( of .*)/) {
