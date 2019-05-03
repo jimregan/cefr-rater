@@ -55,6 +55,16 @@ sub addforms {
     }
 }
 
+
+sub all_verbs {
+    for my $v (@_) {
+        if(!verb($v)->is_verb) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 sub regexify {
     my $in = shift;
     my $pos = shift;
@@ -65,6 +75,7 @@ sub regexify {
     $in =~ s/ (sb\/sth$|swh\/sth$|sth\/sb$|sth$|sb$)//;
     $in =~ s/ \((sb\/sth\)$|sth\/swh\)$|sth\/sb\)$|sth\)$|swh\)$|sb\)$)//;
     $in =~ s/ \(([a-z]+(?: [a-z]+)*) (sth\)$|sb\)$)/ ($1)/;
+    $in =~ s/\.\.\.\??$//;
 
     my $out = '';
     if($in =~ /^not be /) {
@@ -81,6 +92,23 @@ sub regexify {
         $out = "(?:not have |doesn't have |don't have |didn't have |won't have |hasn't |hadn't |haven't )";
     } elsif($in =~ / sth\/doing sth$/) {
         $in =~ s/ sth\/doing sth$/ (doing)/;
+    } elsif($pos eq 'phrase' || $pos eq '"phrasal verb"') {
+        my @tmpwrds = split/ /, $in;
+        if($tmpwrds[0] =~ /\//) {
+            my @firsts = split(/\//, $tmpwrds[0]);
+            if(all_verbs(@firsts)) {
+                my @regexes = map { verb($_)->as_regex } @firsts;
+                $out .= "(?^i:" . join("|", @regexes) . ") ";
+                shift @tmpwrds;
+                $in = join(' ', @tmpwrds); 
+            }
+        } else {
+            if(verb($tmpwrds[0])->is_verb) {
+                $out .= verb($tmpwrds[0])->as_regex . ' ';
+                shift @tmpwrds;
+                $in = join(' ', @tmpwrds); 
+            }
+        }
     }
 
     my @words = split/ /, $in;
