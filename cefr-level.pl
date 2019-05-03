@@ -109,12 +109,12 @@ while(<DICT>) {
         my $word = $2;
         my $level = $4;
         my $pos = $5;
-        if($word =~ /^[a-z][a-z\-]+$/ || $word eq 'I') {
-            addforms($word, $pos, $level);
-        } elsif($word =~ /[A-Z][a-z]+\!/) {
-            addforms($word, $pos, $level);
+        if($id eq '14225') {
+            addforms('first-rate', 'phrase', $level);
+            addforms('second-rate', 'phrase', $level);
+            addforms('third-rate', 'phrase', $level);
         } else {
-            print STDERR "NONSIMPLE: $word\n";
+            addforms($word, $pos, $level);
         }
     } elsif(/^([0-9]+);"([^"]+)";([^;]*)?;([ABC][12]);(.*)$/) {
         print "Complex: $_\n";
