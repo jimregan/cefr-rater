@@ -25,7 +25,7 @@ sub level_lt {
     my $b = shift;
     return ($lmap{$a} < $lmap{$b}) ? 1 : 0;
 }
-my %phrases = ();
+my %phrases = map { $_ => [] } keys %lmap;
 my %simple_words = ();
 my %simple_totals = map { $_ => 0 } keys %lmap;
 
@@ -65,6 +65,7 @@ sub regexify {
     $in =~ s/ (sb\/sth$|swh\/sth$|sth\/sb$|sth$|sb$)//;
     $in =~ s/ \((sb\/sth\)$|sth\/swh\)$|sth\/sb\)$|sth\)$|swh\)$|sb\)$)//;
     $in =~ s/ \(([a-z]+(?: [a-z]+)*) (sth\)$|sb\)$)/ ($1)/;
+
     my $out = '';
     if($in =~ /^not be /) {
         $in =~ s/^not be //;
@@ -81,6 +82,7 @@ sub regexify {
     } elsif($in =~ / sth\/doing sth$/) {
         $in =~ s/ sth\/doing sth$/ (doing)/;
     }
+
     my @words = split/ /, $in;
     for(my $i = 0; $i <= $#words; $i++) {
         my $w = $words[$i];
@@ -112,7 +114,9 @@ sub regexify {
             }
         } else {
             if($i != $#words) {
-                $out .= ' ';
+                $out .= "$w ";
+            } else {
+                $out .= "$w";
             }
         }
     }
@@ -213,7 +217,11 @@ while(<DICT>) {
         } else {
             push @parts, $word;
         }
-        
+
+        my $ref = $phrases{$level};
+        for my $part (@parts) {
+            push @{$ref}, regexify($part, $pos);
+        }
     } else {
         print "NO MATCH: $_\n";
     }
