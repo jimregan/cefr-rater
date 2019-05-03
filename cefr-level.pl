@@ -10,7 +10,6 @@ use Data::Dumper;
 my $BE_FILENAME = 'English Vocabulary Profile Online - British English.csv';
 open(DICT, '<', $BE_FILENAME);
 
-my %lexical_or = map { $_ => 1 } qw/11337 11857 11883 13645 13647 13650 13843 13932 13933 15360 15607 15608 15524 15525 15526 15527 15528 15529 15532 15571/;
 my %slash_splits = map { $_ => 1 } qw/15629 15490 12226/;
 
 my %lmap = (
@@ -202,16 +201,13 @@ while(<DICT>) {
                 next;
             }
         }
+        my @parts = ();
         if($word =~ / or /) {
             my @p = split/ or /, $word;
             my @w1 = split/ /, $p[0];
             if($p[1] =~ /^$w1[0]/) {
-                print "LEXICAL: $id\t$word\n"
+                @parts = @p;
             }
-        }
-        my @parts = ();
-        if(exists $lexical_or{$id}) {
-            @parts = split/ or /, $word;
         } elsif(exists $slash_splits{$id}) {
             @parts = split/ ?\/ /, $word;
         } else {
