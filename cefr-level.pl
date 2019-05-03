@@ -26,7 +26,7 @@ sub level_lt {
     my $b = shift;
     return ($lmap{$a} < $lmap{$b}) ? 1 : 0;
 }
-my %phrases = map { $_ => () } keys %lmap;
+my %phrases = ();
 my %simple_words = ();
 my %simple_totals = map { $_ => 0 } keys %lmap;
 
@@ -63,22 +63,24 @@ sub regexify {
     $in =~ s/ +$//;
     $in =~ s/\, etc.$//;
     $in =~ s/\, etc. / /;
-    $in =~ s/ (sb\/sth$|sth\/sb$|sth$|sb$)//;
+    $in =~ s/ (sb\/sth$|swh\/sth$|sth\/sb$|sth$|sb$)//;
+    $in =~ s/ \((sb\/sth\)$|sth\/swh\)$|sth\/sb\)$|sth\)$|swh\)$|sb\)$)//;
+    $in =~ s/ \(([a-z]+(?: [a-z]+)*) (sth\)$|sb\)$)/ ($1)/;
     my $out = '';
     if($in =~ /^not be /) {
-        $in s/^not be //;
+        $in =~ s/^not be //;
         $out = "(?:isn't |is not |wasn't |was not |not been |will not be |not be |won't be |are not |aren't |were not |weren't |am not )";
     } elsif($in =~ /^not be\/come /) {
-        $in s/^not be //;
+        $in =~ s/^not be //;
         $out = "(?:isn't |is not |wasn't |was not |not been |will not be |not be |won't be |are not |aren't |were not |weren't |am not |not come |doesn't come |don't come |didn't come |won't come)";
     } elsif($in =~ /^not /) {
-        $in s/^not //;
+        $in =~ s/^not //;
         $out = "(?:not |doesn't |don't |didn't |won't )";
     } elsif($in =~ /^not /) {
-        $in s/^not have //;
+        $in =~ s/^not have //;
         $out = "(?:not have |doesn't have |don't have |didn't have |won't have |hasn't |hadn't |haven't )";
     } elsif($in =~ / sth\/doing sth$/) {
-        $in s/ sth\/doing sth$/ (doing)/;
+        $in =~ s/ sth\/doing sth$/ (doing)/;
     }
     my @words = split/ /, $in;
     for(my $i = 0; $i <= $#words; $i++) {
@@ -99,6 +101,8 @@ sub regexify {
             $w = "(?:$w)";
         } elsif($w =~ /\(s\)$/) {
             $w =~ s/\(s\)$/s?/g;
+        } elsif($w =~ /\(s\)\//) {
+            $w =~ s/\(s\)\//s?\//g;
         }
         if($parens) {
             if($i != $#words) {
@@ -168,7 +172,33 @@ while(<DICT>) {
         my $word = $2;
         my $level = $4;
         my $pos = $5;
-#        print "Complex: $_\n";
+        if($id eq '695') {
+            push @{$phrases{'B1'}}, "check-in(?: desks?)?";
+            next;
+        }
+        if($id eq '696') {
+            push @{$phrases{'B1'}}, "check-in(?: counters?)?";
+            next;
+        }
+        if($pos eq 'noun' && $word !~ /[\(\)\/]/) {
+            print STDERR "Safe noun: $word\n";
+            my $aref = $phrases{$level};
+            my $lemmaqueue = '';
+            if($word =~ /( of .*)/) {
+                $lemmaqueue = $1;
+                $word =~ s/$lemmaqueue$//;
+            }
+            my @npieces = split/ /, $word;
+            if($npieces[0] eq 'the' || $npieces[0] eq 'a' || $npieces[0] eq 'an') {
+                push @{$aref}, join(' ', $word);
+                next;
+            } else {
+                my $nounpart = noun($npieces[$#npieces])->as_regex;
+                $npieces[$#npieces] = $nounpart;
+                push @{$aref}, join(' ', @npieces) . $lemmaqueue;
+                next;
+            }
+        }
         my @parts = ();
         if(exists $lexical_or{$id}) {
             @parts = split/ or /, $word;
@@ -201,3 +231,5 @@ for my $levelout (qw/A1 A2 B1 B2 C1 C2/) {
     my $pct = sprintf("%.2f", $cnt / $#words * 100);
     print "Level $levelout: $cnt ($pct%)\n";
 }
+
+print Dumper(\%phrases);
