@@ -6,6 +6,8 @@ use utf8;
 use Lingua::EN::Inflexion;
 use Data::Dumper;
 
+my $USE_PHRASES = 0;
+
 # https://englishprofile.org/wordlists/evp?task=downloadCSV
 my $BE_FILENAME = 'English Vocabulary Profile Online - British English.csv';
 open(DICT, '<', $BE_FILENAME);
@@ -37,6 +39,7 @@ sub level_lt {
     return ($lmap{$a} < $lmap{$b}) ? 1 : 0;
 }
 my %phrases = map { $_ => [] } keys %lmap;
+my %single_words = map { $_ => [] } keys %lmap;
 my %simple_words = ();
 my %simple_totals = map { $_ => 0 } keys %lmap;
 
@@ -181,12 +184,15 @@ sub check_simple {
     if(exists $simple_words{$raw}) {
         my $lvl = $simple_words{$raw};
         $simple_totals{$lvl}++;
+        push @{$single_words{$lvl}}, $raw;
     } elsif(exists $simple_words{$nopunct}) {
         my $lvl = $simple_words{$nopunct};
         $simple_totals{$lvl}++;
+        push @{$single_words{$lvl}}, $nopunct;
     } elsif(exists $simple_words{$lower}) {
         my $lvl = $simple_words{$lower};
         $simple_totals{$lvl}++;
+        push @{$single_words{$lvl}}, $lower;
    } elsif($nopunct =~ /[A-Z][a-z]+/) {
         push @names, $nopunct;
     } else {
@@ -222,6 +228,7 @@ while(<DICT>) {
         my $word = $2;
         my $level = $4;
         my $pos = $5;
+        next if(!$USE_PHRASES);
         if(exists $np{$id}) {
             $pos = 'noun';
         }
@@ -294,6 +301,8 @@ while(<STDIN>) {
     $text .= " $_";
 }
 $text =~ s/^ //;
+$text =~ s/  +/ /;
+$text =~ s/ $//;
 my @words = split/ /, $text;
 for my $simple (@words) {
     check_simple($simple);
@@ -304,28 +313,32 @@ for my $levelout (qw/A1 A2 B1 B2 C1 C2/) {
     my $cnt = $simple_totals{$levelout};
     my $pct = sprintf("%.2f", $cnt / $#words * 100);
     print "Level $levelout: $cnt ($pct%)\n";
+    my @clevel = uniq(@{$single_words{$levelout}});
+    if(($levelout eq 'C1' || $levelout eq 'C2') && $#clevel > 0) {
+        print "Words seen $levelout:\n";
+        print join(' ', @clevel);
+        print "\n";
+    }
 }
 
-for my $levelout (qw/A1 A2 B1 B2 C1 C2/) {
-    my @sorted = uniq(sort { length $b <=> length $a } @{$phrases{$levelout}});
-    #my $regex = '(?:' . join('|', @sorted) . ')';
-#    if($levelout eq 'C2') {
-#        print STDERR "$regex\n";
-#    }
-    my @clevel = ();
-    my $cnt = 0;
-    for my $regex (@sorted) {
-print STDERR "REGEX: $regex\n";
-        while($text =~ /$regex/) {
-            my $match = $1;
-            push @clevel, $match;
-            $cnt++;
+if($USE_PHRASES) {
+    for my $levelout (qw/A1 A2 B1 B2 C1 C2/) {
+        my @sorted = uniq(sort { length $b <=> length $a } @{$phrases{$levelout}});
+        #my $regex = '(?:' . join('|', @sorted) . ')';
+        my @clevel = ();
+        my $cnt = 0;
+        for my $regex (@sorted) {
+            while($text =~ /$regex/) {
+                my $match = $1;
+                push @clevel, $match;
+                $cnt++;
+            }
         }
-    }
-    print "$levelout phrases: $cnt\n";
-    if(!level_lt('B2', $levelout) && $#clevel > 0) {
-        print "Phrases seen:\n";
-        print join('\n', @clevel);
-        print "\n";
+        print "$levelout phrases: $cnt\n";
+        if(!level_lt('B2', $levelout) && $#clevel > 0) {
+            print "Phrases seen:\n";
+            print join('\n', @clevel);
+            print "\n";
+        }
     }
 }
