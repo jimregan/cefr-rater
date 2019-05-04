@@ -93,10 +93,11 @@ sub regexify {
     my $out = '';
     if($in =~ /^not be /) {
         $in =~ s/^not be //;
-        $out = "(?:isn't |is not |wasn't |was not |not been |will not be |not be |won't be |are not |aren't |were not |weren't |am not )";
+        #$out = "(?:isn't |is not |wasn't |was not |not been |not be |won't be |are not |aren't |were not |weren't |am not )";
+        $out = "(?:not |n't )";
     } elsif($in =~ /^not be\/come /) {
         $in =~ s/^not be\/come //;
-        $out = "(?:isn't |is not |wasn't |was not |not been |will not be |not be |won't be |are not |aren't |were not |weren't |am not |not come |doesn't come |don't come |didn't come |won't come)";
+        $out = "(?:isn't |is not |wasn't |was not |not been |not be |won't be |are not |aren't |were not |weren't |am not |not come |doesn't come |don't come |didn't come |won't come)";
     } elsif($in =~ /^not /) {
         $in =~ s/^not //;
         $out = "(?:not |doesn't |don't |didn't |won't )";
@@ -307,16 +308,19 @@ for my $levelout (qw/A1 A2 B1 B2 C1 C2/) {
 
 for my $levelout (qw/A1 A2 B1 B2 C1 C2/) {
     my @sorted = uniq(sort { length $b <=> length $a } @{$phrases{$levelout}});
-    my $regex = '(?:' . join('|', @sorted) . ')';
-    if($levelout eq 'C2') {
-        print STDERR "$regex\n";
-    }
+    #my $regex = '(?:' . join('|', @sorted) . ')';
+#    if($levelout eq 'C2') {
+#        print STDERR "$regex\n";
+#    }
     my @clevel = ();
     my $cnt = 0;
-    while($text =~ /$regex/) {
-        my $match = $1;
-        push @clevel, $match;
-        $cnt++;
+    for my $regex (@sorted) {
+print STDERR "REGEX: $regex\n";
+        while($text =~ /$regex/) {
+            my $match = $1;
+            push @clevel, $match;
+            $cnt++;
+        }
     }
     print "$levelout phrases: $cnt\n";
     if(!level_lt('B2', $levelout) && $#clevel > 0) {
