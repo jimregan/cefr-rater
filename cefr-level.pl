@@ -9,6 +9,17 @@ use Data::Dumper;
 # https://englishprofile.org/wordlists/evp?task=downloadCSV
 my $BE_FILENAME = 'English Vocabulary Profile Online - British English.csv';
 open(DICT, '<', $BE_FILENAME);
+open(VERBS, '<', "verbs.txt");
+my %verbs = ();
+while(<VERBS>) {
+    chomp;
+    $verbs{$_} = 1;
+}
+
+sub is_verb {
+    my $v = shift;
+    return exists $verbs{$v};
+}
 
 my %slash_splits = map { $_ => 1 } qw/15629 15490 12226 15309 13570 12336/;
 
@@ -55,12 +66,12 @@ sub addforms {
     }
 }
 
-my %vp = map { $_ => 1 } qw/13751 14415 /;
+my %vp = map { $_ => 1 } qw/13751 14415 15010 15011 14874 13313 14903/;
 my %np = map { $_ => 1 } qw/15479 15355 15309 14975 14800 14185 13404 13360 12074 11333 13333 14948/;
 
 sub all_verbs {
     for my $v (@_) {
-        if(!verb($v)->is_verb) {
+        if(!is_verb($v)) {
             return 0;
         }
     }
@@ -84,12 +95,12 @@ sub regexify {
         $in =~ s/^not be //;
         $out = "(?:isn't |is not |wasn't |was not |not been |will not be |not be |won't be |are not |aren't |were not |weren't |am not )";
     } elsif($in =~ /^not be\/come /) {
-        $in =~ s/^not be //;
+        $in =~ s/^not be\/come //;
         $out = "(?:isn't |is not |wasn't |was not |not been |will not be |not be |won't be |are not |aren't |were not |weren't |am not |not come |doesn't come |don't come |didn't come |won't come)";
     } elsif($in =~ /^not /) {
         $in =~ s/^not //;
         $out = "(?:not |doesn't |don't |didn't |won't )";
-    } elsif($in =~ /^not /) {
+    } elsif($in =~ /^not have /) {
         $in =~ s/^not have //;
         $out = "(?:not have |doesn't have |don't have |didn't have |won't have |hasn't |hadn't |haven't )";
     } elsif($in =~ / sth\/doing sth$/) {
@@ -105,7 +116,7 @@ sub regexify {
                 $in = join(' ', @tmpwrds); 
             }
         } else {
-            if(verb($tmpwrds[0])->is_verb) {
+            if(is_verb($tmpwrds[0])) {
                 $out .= verb($tmpwrds[0])->as_regex . ' ';
                 shift @tmpwrds;
                 $in = join(' ', @tmpwrds); 
@@ -182,6 +193,11 @@ sub check_simple {
     }
 }
 
+sub uniq {
+    my %k = map { $_ => 1 } @_;
+    return keys %k;
+}
+
 while(<DICT>) {
     chomp;
     s/\r//;
@@ -242,6 +258,12 @@ while(<DICT>) {
             }
         }
         my @parts = ();
+        my $ref = $phrases{$level};
+        if($id eq '11383' || $id eq '13446') {
+            push @{$ref}, regexify('keeb sb at arm\'s length', '"phrasal verb"');
+            push @{$ref}, regexify('at arm\'s length', 'phrase');
+            next;
+        }
         if($word =~ / or /) {
             my @p = split/ or /, $word;
             my @w1 = split/ /, $p[0];
@@ -256,7 +278,6 @@ while(<DICT>) {
             push @parts, $word;
         }
 
-        my $ref = $phrases{$level};
         for my $part (@parts) {
             push @{$ref}, regexify($part, $pos);
         }
@@ -285,7 +306,11 @@ for my $levelout (qw/A1 A2 B1 B2 C1 C2/) {
 }
 
 for my $levelout (qw/A1 A2 B1 B2 C1 C2/) {
-    my $regex = '(?:' . join('|', @{$phrases{$levelout}}) . ')';
+    my @sorted = uniq(sort { length $b <=> length $a } @{$phrases{$levelout}});
+    my $regex = '(?:' . join('|', @sorted) . ')';
+    if($levelout eq 'C2') {
+        print STDERR "$regex\n";
+    }
     my @clevel = ();
     my $cnt = 0;
     while($text =~ /$regex/) {
@@ -294,7 +319,7 @@ for my $levelout (qw/A1 A2 B1 B2 C1 C2/) {
         $cnt++;
     }
     print "$levelout phrases: $cnt\n";
-    if(!level_lt('B2', $levelout)) {
+    if(!level_lt('B2', $levelout) && $#clevel > 0) {
         print "Phrases seen:\n";
         print join('\n', @clevel);
         print "\n";
