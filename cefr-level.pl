@@ -10,7 +10,7 @@ use Data::Dumper;
 my $BE_FILENAME = 'English Vocabulary Profile Online - British English.csv';
 open(DICT, '<', $BE_FILENAME);
 
-my %slash_splits = map { $_ => 1 } qw/15629 15490 12226/;
+my %slash_splits = map { $_ => 1 } qw/15629 15490 12226 15309 13570 12336/;
 
 my %lmap = (
     'A1' => 1,
@@ -55,6 +55,8 @@ sub addforms {
     }
 }
 
+my %vp = map { $_ => 1 } qw/13751 14415 /;
+my %np = map { $_ => 1 } qw/15479 15355 15309 14975 14800 14185 13404 13360 12074 11333 13333 14948/;
 
 sub all_verbs {
     for my $v (@_) {
@@ -203,6 +205,12 @@ while(<DICT>) {
         my $word = $2;
         my $level = $4;
         my $pos = $5;
+        if(exists $np{$id}) {
+            $pos = 'noun';
+        }
+        if(exists $vp{$id}) {
+            $pos = '"phrasal verb"';
+        }
         if($id eq '695') {
             push @{$phrases{'B1'}}, "check-in(?: desks?)?";
             next;
@@ -240,6 +248,8 @@ while(<DICT>) {
             if($p[1] =~ /^$w1[0]/) {
                 @parts = @p;
             }
+        } elsif($word =~ /;/) {
+            @parts = split/; /, $word;
         } elsif(exists $slash_splits{$id}) {
             @parts = split/ ?\/ /, $word;
         } else {
@@ -274,4 +284,19 @@ for my $levelout (qw/A1 A2 B1 B2 C1 C2/) {
     print "Level $levelout: $cnt ($pct%)\n";
 }
 
-print Dumper(\%phrases);
+for my $levelout (qw/A1 A2 B1 B2 C1 C2/) {
+    my $regex = '(?:' . join('|', @{$phrases{$levelout}}) . ')';
+    my @clevel = ();
+    my $cnt = 0;
+    while($text =~ /$regex/) {
+        my $match = $1;
+        push @clevel, $match;
+        $cnt++;
+    }
+    print "$levelout phrases: $cnt\n";
+    if(!level_lt('B2', $levelout)) {
+        print "Phrases seen:\n";
+        print join('\n', @clevel);
+        print "\n";
+    }
+}
